@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>도면 양식·척도 마스터 — 용지·윤곽·표제란·척도</title>
+<style>
+  :root{
+    --bg:#0b2540; --panel:#123459; --panel-light:#1c4474;
+    --text:#eaf4ff; --text-dim:#9fc1e0; --accent:#ffb454;
+    --correct:#5fd86f; --wrong:#ff6b6b; --grid:rgba(234,244,255,0.06);
+    --paper:#f4efe0; --ink:#1c3247; --link:#5bc8de;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--text);min-height:100vh;padding:18px 14px 70px;
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;
+    background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/40px 40px,
+               linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/40px 40px,var(--bg);}
+  .wrap{max-width:860px;margin:0 auto}
+  .eyebrow{font-size:.74rem;letter-spacing:.18em;color:var(--accent);text-transform:uppercase;font-weight:700;margin-bottom:6px}
+  h1{font-size:1.5rem;margin:0 0 4px}
+  .subtitle{color:var(--text-dim);font-size:.94rem;margin-bottom:16px;line-height:1.55}
+  .panel{background:var(--panel);border:1px solid rgba(234,244,255,.12);border-radius:14px;padding:20px;margin-bottom:16px}
+  .tabs{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .tab{flex:1 1 128px;background:transparent;border:1px solid rgba(234,244,255,.22);color:var(--text-dim);
+       padding:11px 8px;border-radius:9px;cursor:pointer;font-size:.85rem;font-weight:700;font-family:inherit}
+  .tab:hover{border-color:var(--accent);color:var(--text)}
+  .tab[aria-pressed="true"]{background:var(--accent);color:#1a1306;border-color:var(--accent)}
+  .tab .done{color:var(--correct);font-size:.8rem}
+  .tab[aria-pressed="true"] .done{color:#1a6b28}
+
+  .guide{background:rgba(255,180,84,.1);border:1px solid rgba(255,180,84,.35);border-radius:10px;
+         padding:11px 14px;font-size:.87rem;color:var(--text-dim);line-height:1.6;margin-bottom:14px}
+  .guide b{color:var(--accent)}
+
+  .paperwrap{background:var(--paper);border-radius:12px;padding:16px 12px 12px;position:relative}
+  .paperwrap .cap{position:absolute;top:9px;left:13px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em;color:#5b7286}
+  canvas{display:block;width:100%}
+
+  .row{display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#0f2032;
+       border:1px solid rgba(234,244,255,.14);border-radius:10px;padding:9px 11px;margin-bottom:12px}
+  .row .lab{font-size:.72rem;color:var(--text-dim);letter-spacing:.08em;flex:none}
+  .seg{display:flex;gap:5px;flex-wrap:wrap}
+  .segBtn{background:transparent;border:1px solid rgba(234,244,255,.24);color:var(--text);padding:9px 12px;
+          border-radius:7px;cursor:pointer;font-weight:700;font-size:.8rem;font-family:inherit}
+  .segBtn:hover{border-color:var(--link)}
+  .segBtn[aria-pressed="true"]{background:var(--link);color:#04121c;border-color:var(--link)}
+
+  .btn{border:none;border-radius:10px;background:var(--accent);color:#1a1306;font-weight:800;
+       font-size:.95rem;padding:13px 20px;cursor:pointer;min-height:50px;font-family:inherit}
+  .btn.ghost{background:transparent;border:1px solid rgba(234,244,255,.3);color:var(--text)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+
+  .learnnav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+  .dots{display:flex;gap:6px}
+  .dot{width:10px;height:10px;border-radius:50%;background:rgba(234,244,255,.22)}
+  .dot.on{background:var(--accent)}
+  .dot.seen{background:var(--link)}
+  h2.step{font-size:1.12rem;margin:0 0 8px;color:var(--accent)}
+  .body{font-size:.93rem;line-height:1.7;color:var(--text-dim)}
+  .body b{color:var(--text)}
+  .body .hl{color:var(--accent);font-weight:800}
+
+  table.t{width:100%;border-collapse:collapse;font-size:.84rem;margin-top:10px}
+  table.t th,table.t td{border:1px solid rgba(234,244,255,.16);padding:7px 8px;text-align:center}
+  table.t th{background:var(--panel-light);color:var(--text);font-weight:700}
+  table.t td{color:var(--text-dim)}
+  table.t td.k{color:var(--accent);font-weight:800;font-family:ui-monospace,monospace}
+  table.t tr.on td{background:rgba(255,180,84,.14);color:var(--text)}
+
+  .ksgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:7px;margin-top:10px}
+  .kscard{background:#0f2032;border:1px solid rgba(234,244,255,.18);border-radius:9px;padding:10px 6px;
+          cursor:pointer;text-align:center;font-family:inherit;color:var(--text);min-height:54px}
+  .kscard .sym{font-family:ui-monospace,monospace;font-weight:800;color:var(--accent);font-size:.95rem}
+  .kscard .nm{font-size:.76rem;color:var(--text-dim);margin-top:2px}
+  .kscard.flip{background:var(--panel-light);border-color:var(--link)}
+  .kscard.flip .sym{color:var(--link)}
+
+  .prompt{font-size:1.02rem;margin:14px 0 11px;line-height:1.55}
+  .prompt b{color:var(--accent)}
+  .choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .choices.one{grid-template-columns:1fr}
+  .choice{background:var(--paper);border:3px solid transparent;border-radius:11px;padding:12px 10px;
+          cursor:pointer;display:flex;align-items:flex-start;gap:8px;font-family:inherit;text-align:left;min-height:56px}
+  .choice .num{font-size:.8rem;font-weight:800;color:#5b7286;flex:none;line-height:1.4}
+  .choice .tx{font-weight:800;color:#1c3247;font-size:.95rem;line-height:1.4}
+  .choice .tx small{display:block;font-weight:600;color:#5b7286;font-size:.76rem;margin-top:3px}
+  .choice:hover:not(:disabled){border-color:var(--link)}
+  .choice.sel{border-color:var(--accent);box-shadow:0 0 0 3px rgba(255,180,84,.3)}
+  .choice.correct{border-color:var(--correct);background:#e3f5ec}
+  .choice.wrong{border-color:var(--wrong);background:#fbecea}
+  .choice:disabled{cursor:default}
+
+  .scorebar{display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem;color:var(--text-dim);margin-top:13px}
+  .scorebar b{color:var(--text)}
+  .pill{background:var(--panel-light);border-radius:20px;padding:4px 13px;font-size:.82rem;color:var(--accent);font-weight:800}
+  .toast{font-size:.93rem;font-weight:700;min-height:22px;margin-top:10px;line-height:1.5}
+  .toast.ok{color:var(--correct)} .toast.no{color:var(--wrong)} .toast.go{color:var(--accent)}
+  .explain{background:rgba(91,200,222,.09);border-left:3px solid var(--link);border-radius:0 8px 8px 0;
+           padding:11px 13px;margin-top:11px;font-size:.87rem;color:var(--text-dim);line-height:1.65}
+  .explain b{color:var(--link)}
+  .formula{font-family:ui-monospace,monospace;background:rgba(255,180,84,.12);color:var(--accent);
+           padding:2px 7px;border-radius:5px;font-size:.85rem;display:inline-block;margin-top:3px}
+  .hidden{display:none !important}
+  .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .links a{color:var(--link);text-decoration:none;font-size:.83rem;border:1px solid rgba(91,200,222,.4);padding:7px 12px;border-radius:8px}
+  .links a:hover{background:rgba(91,200,222,.12)}
+  footer{max-width:860px;margin:14px auto 0;color:var(--text-dim);font-size:.8rem;line-height:1.6;text-align:center}
+  @media(max-width:560px){
+    body{padding:14px 10px 60px} .panel{padding:15px}
+    .prompt{font-size:.97rem}
+    .choices{grid-template-columns:1fr}
+    .segBtn{padding:12px 13px;font-size:.84rem}
+    .tab{padding:12px 8px}
+    table.t{font-size:.78rem} table.t th,table.t td{padding:6px 4px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Drawing Format · 도면 양식과 척도</div>
+  <h1>도면 양식·척도 마스터</h1>
+  <p class="subtitle">도면은 아무 종이에 아무렇게나 그리는 게 아닙니다. <b>용지 크기·윤곽선·표제란·척도</b>까지 KS로 정해져 있습니다. 직접 접어 보고, 척도를 바꿔 보며 익힙니다.</p>
+
+  <div class="tabs" role="group" aria-label="모드 선택">
+    <button class="tab" id="tabLearn" aria-pressed="true">📖 배우기 <span class="done hidden" id="dLearn">✓</span></button>
+    <button class="tab" id="tabPaper" aria-pressed="false">도전 ① 용지 고르기</button>
+    <button class="tab" id="tabScale" aria-pressed="false">도전 ② 척도 계산</button>
+    <button class="tab" id="tabForm" aria-pressed="false">도전 ③ 도면 양식</button>
+    <button class="tab" id="tabExam" aria-pressed="false">🎯 종합시험</button>
+  </div>
+
+  <!-- ===================== 배우기 ===================== -->
+  <section id="secLearn">
+    <div class="guide" id="learnGuide">처음이라면 <b>📖 배우기</b>부터 하세요. 정답을 다 보여주는 단계라 <b>맞힐 필요가 없습니다.</b> 4쪽만 넘기면 끝납니다.</div>
+
+    <div class="panel">
+      <div class="learnnav">
+        <div class="dots" id="learnDots"></div>
+        <span class="pill" id="learnPos">1 / 4</span>
+      </div>
+
+      <h2 class="step" id="learnTitle"></h2>
+      <div class="body" id="learnBody"></div>
+
+      <!-- 쪽별 위젯 -->
+      <div id="wKS" class="hidden">
+        <div class="ksgrid" id="ksGrid"></div>
+        <div class="explain" style="margin-top:12px">카드를 누르면 <b>부문 이름 ↔ 기호</b>가 뒤집힙니다. 우리 과에서 제일 많이 쓰는 건 <b>KS B(기계)</b>, 제도 통칙은 <b>KS A 0005</b>입니다.</div>
+      </div>
+
+      <div id="wSize" class="hidden">
+        <div class="row">
+          <span class="lab">용지</span>
+          <div class="seg" id="sizeSeg"></div>
+        </div>
+        <div class="paperwrap"><span class="cap" id="sizeCap">A0</span><canvas id="sizeCv" style="height:300px"></canvas></div>
+        <div class="btnrow">
+          <button class="btn ghost" id="btnFold">✂ 반으로 접기 ▶</button>
+          <button class="btn ghost" id="btnUnfold">◀ 펼치기 (A0으로)</button>
+        </div>
+        <table class="t" id="sizeTable"></table>
+      </div>
+
+      <div id="wForm" class="hidden">
+        <div class="row">
+          <span class="lab">양식 요소</span>
+          <div class="seg" id="formSeg"></div>
+        </div>
+        <div class="paperwrap"><span class="cap">A3 도면 양식</span><canvas id="formCv" style="height:320px"></canvas></div>
+        <div class="explain" id="formExplain"></div>
+      </div>
+
+      <div id="wScale" class="hidden">
+        <div class="row">
+          <span class="lab">척도</span>
+          <div class="seg" id="scaleSeg"></div>
+        </div>
+        <div class="paperwrap"><span class="cap" id="scaleCap">척도 1 : 1</span><canvas id="scaleCv" style="height:270px"></canvas></div>
+        <div class="explain" id="scaleExplain"></div>
+      </div>
+
+      <div class="btnrow">
+        <button class="btn ghost" id="btnPrev">← 이전</button>
+        <button class="btn" id="btnNextPage">다음 →</button>
+        <button class="btn hidden" id="btnGoTest">🎯 이제 테스트 하러 가기</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 문제 ===================== -->
+  <section id="secQuiz" class="hidden">
+    <div class="panel">
+      <div class="prompt" id="qPrompt"></div>
+      <div id="qStageWrap" class="paperwrap hidden">
+        <span class="cap" id="qStageCap"></span>
+        <canvas id="qStageCv" style="height:250px"></canvas>
+      </div>
+      <div class="choices" id="qChoices" style="margin-top:14px"></div>
+      <div class="btnrow">
+        <button class="btn" id="btnSubmit" disabled>제출</button>
+        <button class="btn ghost hidden" id="btnNext">다음 문제 →</button>
+        <button class="btn ghost" id="btnRestart">처음부터</button>
+      </div>
+      <div class="scorebar">
+        <span>문제 <b id="qRound">1</b> / <b id="qTotal">8</b></span>
+        <span>맞은 개수 <b id="qScore">0</b></span>
+        <span class="pill" id="qCombo">연속 0</span>
+      </div>
+      <div class="toast go" id="qToast">보기를 고른 뒤 <b>제출</b>을 누르세요.</div>
+      <div class="explain hidden" id="qExplain"></div>
+    </div>
+  </section>
+
+  <div class="panel" style="padding:16px 20px">
+    <div style="font-size:.84rem;color:var(--text-dim);margin-bottom:8px">🔗 같은 단원의 다른 도구</div>
+    <div class="links">
+      <a href="https://hongyul67-cpu.github.io/domyeon-master/" target="_blank" rel="noopener">도면읽기 마스터 — 선의 종류</a>
+      <a href="https://hongyul67-cpu.github.io/dimensioning-master/" target="_blank" rel="noopener">치수기입 마스터</a>
+      <a href="https://hongyul67-cpu.github.io/tusang-master/" target="_blank" rel="noopener">투상도 마스터</a>
+      <a href="https://hongyul67-cpu.github.io/jeongaedo-master/" target="_blank" rel="noopener">전개도 마스터</a>
+    </div>
+  </div>
+</div>
+<footer>기초제도 Ⅱ. 제도의 규격과 통칙 — 1. 제도의 규격 · 2. 도면의 크기 및 척도<br>제작: hong · 기계 계열 특성화고 수업 보조 도구</footer>
+
+<script src="https://hongyul67-cpu.github.io/links/collector.js" data-tool="도면 양식·척도 마스터"></script>
+<script src="https://hongyul67-cpu.github.io/links/fx.js"></script>
+<script>
+(function(){
+"use strict";
+const el=id=>document.getElementById(id);
+const rnd=n=>Math.floor(Math.random()*n), pick=a=>a[rnd(a.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+const has=n=>typeof FX!=="undefined" && typeof FX[n]==="function";
+const fxRight=e=>{ if(has("burst")) FX.burst(e); if(has("punch")) FX.punch(e); };
+const fxWrong =e=>{ if(has("shake")) FX.shake(e); if(has("flash")) FX.flash(); };
+const fxBanner=o=>{ if(has("banner")) FX.banner(o); };
+const fxStars =m=>has("starsFor")?FX.starsFor(m):3;
+
+/* ================= 데이터 (KS A 0005 / KS B ISO 5457 / KS A ISO 5455) ================= */
+// 용지: [이름, 짧은변 a1, 긴변 b1, 제도영역 짧은변 a2, 제도영역 긴변 b2, 구역수 긴변, 구역수 짧은변]
+const PAPERS=[
+  {n:"A0", a:841, b:1189, ca:821, cb:1159, za:16, zb:24},
+  {n:"A1", a:594, b:841,  ca:574, cb:811,  za:12, zb:16},
+  {n:"A2", a:420, b:594,  ca:400, cb:564,  za:8,  zb:12},
+  {n:"A3", a:297, b:420,  ca:277, cb:390,  za:6,  zb:8},
+  {n:"A4", a:210, b:297,  ca:180, cb:277,  za:4,  zb:6}
+];
+const P=Object.fromEntries(PAPERS.map(p=>[p.n,p]));
+
+const KS=[
+  ["A","기본"],["B","기계"],["C","전기·전자"],["D","금속"],["E","광산"],["F","건설"],["G","일용품"],
+  ["H","식품"],["I","환경"],["J","생물"],["K","섬유"],["L","요업"],["M","화학"],["P","의료"],
+  ["Q","품질경영"],["R","수송기계"],["S","서비스"],["T","물류"],["V","조선"],["W","항공우주"],["X","정보"]
+];
+const STD=[
+  ["ISO","국제표준화기구","전기·전자를 뺀 모든 분야의 국제 표준"],
+  ["IEC","국제전기표준회의","전기·전자 분야의 국제 표준"],
+  ["KS","한국 산업 표준","우리나라 국가 표준"],
+  ["ANSI","미국 표준","미국 국가 표준"],
+  ["JIS","일본 공업 표준","일본 국가 표준"],
+  ["BS","영국 표준","영국 국가 표준"],
+  ["DIN","독일 표준","독일 국가 표준"],
+  ["NF","프랑스 표준","프랑스 국가 표준"],
+  ["GB","중국 국가 표준","중국 국가 표준"]
+];
+
+// 양식 요소
+const FORMS={
+  frame:{name:"윤곽선", tip:"재단된 용지의 제도 영역을 네 변으로 둘러싼 선. <b>왼쪽은 20mm</b>(철할 때 여백), <b>나머지 세 변은 10mm</b>. <b>0.7mm 굵기 실선</b>으로 그린다."},
+  title:{name:"표제란", tip:"제도 영역의 <b>오른쪽 아래 구석</b>에 둔다. 도면을 읽는 방향 = 표제란을 읽는 방향. <b>도번·도명·척도·투상법·작성일·제도자</b>를 적는다."},
+  center:{name:"중심 마크", tip:"용지를 다시 만들거나 마이크로필름으로 만들 때 위치를 잡으려고 <b>두 대칭축 끝에 4개</b> 표시. 구역 표시 경계에서 시작해 <b>윤곽을 지나 10mm까지</b>, 0.7mm 실선."},
+  zone:{name:"구역 표시", tip:"수정·상세 위치를 가리키려고 나눈 구역. <b>세로는 영문 대문자</b>(숫자 1·0과 헷갈려서 <b>I와 O는 안 씀</b>), <b>가로는 숫자</b>. 한 구역 <b>50mm</b>, 문자 크기 3.5mm, 0.35mm 실선."},
+  cut:{name:"재단 마크", tip:"복사한 도면을 자를 위치 표시. 네 변의 경계에 <b>10mm × 5mm</b> 직사각형 두 개가 합쳐진 모양으로 표시한다."}
+};
+const FORMKEYS=["frame","title","center","zone","cut"];
+
+// 척도
+const SCALES=[
+  {t:"1:5", k:0.2, kind:"축척"}, {t:"1:2", k:0.5, kind:"축척"},
+  {t:"1:1", k:1,   kind:"현척"},
+  {t:"2:1", k:2,   kind:"배척"}, {t:"5:1", k:5,   kind:"배척"}
+];
+const KINDTIP={
+  "축척":"실물보다 <b>작게</b> 그림. 1:2, 1:5, 1:10처럼 <b>1 : 큰수</b> 꼴이고 1:1보다 작은 척도.",
+  "현척":"실물과 <b>같은 크기</b>로 그림. <b>1:1</b>뿐이고 실척이라고도 한다.",
+  "배척":"실물보다 <b>크게</b> 그림. 2:1, 5:1, 10:1처럼 <b>큰수 : 1</b> 꼴이고 1:1보다 큰 척도."
+};
+
+/* ================= 캔버스 도우미 ================= */
+function ctxOf(cv){
+  const dpr=window.devicePixelRatio||1;
+  const w=cv.clientWidth||cv.parentElement.clientWidth||600;
+  const h=parseFloat(getComputedStyle(cv).height)||240;
+  cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+  const g=cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  return {g,w,h};
+}
+function rect(g,x,y,w,h,color,lw,dash){
+  g.save(); g.strokeStyle=color; g.lineWidth=lw||1; if(dash)g.setLineDash(dash);
+  g.strokeRect(x,y,w,h); g.restore();
+}
+function txt(g,s,x,y,opt){
+  opt=opt||{}; g.save();
+  g.fillStyle=opt.color||"#1c3247";
+  g.font=(opt.bold?"700 ":"")+(opt.size||12)+"px 'Malgun Gothic',sans-serif";
+  g.textAlign=opt.align||"center"; g.textBaseline=opt.base||"middle";
+  g.fillText(s,x,y); g.restore();
+}
+function dimLine(g,x1,y1,x2,y2,label,color){
+  color=color||"#c1622a"; g.save(); g.strokeStyle=color; g.lineWidth=1;
+  g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke();
+  const ah=5, an=Math.atan2(y2-y1,x2-x1);
+  [[x1,y1,an],[x2,y2,an+Math.PI]].forEach(([x,y,a])=>{
+    g.beginPath(); g.moveTo(x,y);
+    g.lineTo(x+ah*Math.cos(a-0.35),y+ah*Math.sin(a-0.35));
+    g.lineTo(x+ah*Math.cos(a+0.35),y+ah*Math.sin(a+0.35));
+    g.closePath(); g.fillStyle=color; g.fill();
+  });
+  g.restore();
+  if(label){
+    const mx=(x1+x2)/2,my=(y1+y2)/2, vert=Math.abs(y2-y1)>Math.abs(x2-x1);
+    txt(g,label,mx+(vert?-14:0),my+(vert?0:-9),{color:color,bold:true,size:12});
+  }
+}
+
+/* ================= 배우기 ================= */
+const LEARN=[
+  {title:"① 왜 규칙(표준)부터 배울까",
+   body:"도면은 <b>말없이 전달하는 지시서</b>입니다. 그린 사람과 만드는 사람이 서로 다른 규칙을 쓰면 물건이 엉뚱하게 나옵니다. 그래서 나라마다 도면 규칙을 정해 두었고, 우리나라 규칙이 <span class='hl'>한국 산업 표준(KS)</span>입니다.<br><br>KS는 분야별로 <b>A부터 X까지 21개 부문</b>으로 나뉘어 있고, 제도의 기본 규칙은 <span class='hl'>KS A 0005(제도 통칙)</span>에 들어 있습니다. 우리가 배우는 기계 도면은 <span class='hl'>KS B</span>가 기계 부문입니다.<br><br>딱 이것만 기억하면 이 쪽은 끝입니다 — <b>KS = 우리나라 표준, A = 기본, B = 기계, 제도 통칙 = KS A 0005.</b>",
+   widget:"wKS"},
+  {title:"② 도면의 크기 — A0을 반으로 접으면 A1",
+   body:"도면 용지는 <span class='hl'>A0 ~ A4</span>를 씁니다. 외울 게 많아 보이지만 규칙은 하나입니다. <b>큰 것을 반으로 접으면 바로 다음 것</b>이 됩니다.<br><br>가장 큰 <b>A0은 841 × 1189</b>, 넓이가 약 <b>1m²</b>입니다. 짧은 변 : 긴 변 = <span class='hl'>1 : √2</span> 라서 반으로 접어도 모양 비율이 그대로 유지됩니다. 큰 도면을 접어서 보관할 때는 <b>A4 크기로 접는 것이 원칙</b>입니다.<br><br>아래에서 <b>✂ 반으로 접기</b>를 눌러 A0 → A1 → A2 → A3 → A4 로 직접 접어 보세요.",
+   widget:"wSize"},
+  {title:"③ 도면의 양식 — 5가지 요소",
+   body:"도면은 그림만 있는 게 아닙니다. 관리하려고 <b>정해진 자리에 정해진 것</b>을 그려 넣습니다. 아래 버튼으로 하나씩 켜 보세요.<br><br><b>윤곽선 · 표제란 · 중심 마크 · 구역 표시 · 재단 마크</b> 다섯 가지이고, 시험에 제일 많이 나오는 건 <span class='hl'>왼쪽 윤곽 20mm(철하는 여백) / 나머지 10mm</span>와 <span class='hl'>표제란은 오른쪽 아래</span>입니다.",
+   widget:"wForm"},
+  {title:"④ 척도 — 그림만 커지고, 치수는 실제 치수",
+   body:"척도(scale)는 <b>실물에 대한 도면 그림의 비율</b>입니다. <span class='hl'>척도 A : B</span> 에서 <b>A는 도면에서의 크기, B는 실제 크기</b>입니다.<br><br>· <b>축척</b> 1:2, 1:5 … 실물보다 작게<br>· <b>현척</b> 1:1 … 실물과 같게<br>· <b>배척</b> 2:1, 5:1 … 실물보다 크게<br><br>여기서 <b>제일 많이 틀리는 것</b> — 척도를 바꿔도 <span class='hl'>도면에 적는 치수 숫자는 언제나 실제 치수</span>입니다. 1:2로 그렸다고 60을 30이라 적지 않습니다. 척도는 <b>표제란</b>에 적고, 비례가 아니면 <span class='hl'>NS</span>(Not to Scale)라고 적거나 치수 밑에 밑줄을 긋습니다.<br><br>아래에서 척도를 바꿔 보세요. 회색이 실물, 주황이 도면 그림입니다.",
+   widget:"wScale"}
+];
+let page=0, seen=new Set();
+const LKEY="learned_paper_scale";
+try{ if(localStorage.getItem(LKEY)==="1") el("dLearn").classList.remove("hidden"); }catch(e){}
+
+function renderLearn(){
+  const L=LEARN[page];
+  el("learnTitle").innerHTML=L.title;
+  el("learnBody").innerHTML=L.body;
+  ["wKS","wSize","wForm","wScale"].forEach(w=>el(w).classList.toggle("hidden",w!==L.widget));
+  el("learnPos").textContent=(page+1)+" / "+LEARN.length;
+  el("learnDots").innerHTML=LEARN.map((_,i)=>
+    '<span class="dot '+(i===page?"on":(seen.has(i)?"seen":""))+'"></span>').join("");
+  el("btnPrev").disabled=page===0;
+  const last=page===LEARN.length-1;
+  el("btnNextPage").classList.toggle("hidden",last);
+  el("btnGoTest").classList.toggle("hidden",!last);
+  seen.add(page);
+  if(L.widget==="wSize") drawSize();
+  if(L.widget==="wForm") drawForm();
+  if(L.widget==="wScale") drawScale();
+  if(last){ try{ localStorage.setItem(LKEY,"1"); }catch(e){} el("dLearn").classList.remove("hidden"); }
+}
+el("btnPrev").onclick=()=>{ if(page>0){page--;renderLearn();} };
+el("btnNextPage").onclick=()=>{ if(page<LEARN.length-1){page++;renderLearn();} };
+el("btnGoTest").onclick=()=>{
+  fxBanner({icon:"📖",title:"배우기 완료!",sub:"이제 도전 ①부터 하나씩 풀어 보세요.",stars:3});
+  showTab("tabPaper");
+};
+
+/* ---- 쪽 ① KS 카드 ---- */
+el("ksGrid").innerHTML=KS.map(([s,n],i)=>
+  '<button class="kscard" type="button" data-i="'+i+'"><span class="sym">KS '+s+'</span><span class="nm">'+n+'</span></button>').join("");
+el("ksGrid").addEventListener("click",e=>{
+  const b=e.target.closest(".kscard"); if(!b) return;
+  const [s,n]=KS[+b.dataset.i];
+  b.classList.toggle("flip");
+  b.innerHTML=b.classList.contains("flip")
+    ? '<span class="sym">'+n+'</span><span class="nm">KS '+s+'</span>'
+    : '<span class="sym">KS '+s+'</span><span class="nm">'+n+'</span>';
+  fxRight(b);
+});
+
+/* ---- 쪽 ② 용지 접기 ---- */
+let sizeIdx=0, foldT=0, foldAnim=null;
+el("sizeSeg").innerHTML=PAPERS.map((p,i)=>
+  '<button class="segBtn" type="button" data-i="'+i+'" aria-pressed="'+(i===0)+'">'+p.n+'</button>').join("");
+el("sizeSeg").addEventListener("click",e=>{
+  const b=e.target.closest(".segBtn"); if(!b) return;
+  sizeIdx=+b.dataset.i; foldT=0; stopFold();
+  el("sizeSeg").querySelectorAll(".segBtn").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  drawSize();
+});
+let foldGuard=null, folding=false;
+function stopFold(){
+  if(foldAnim){cancelAnimationFrame(foldAnim);foldAnim=null;}
+  if(foldGuard){clearTimeout(foldGuard);foldGuard=null;}
+  folding=false;
+}
+function finishFold(){                                     // 몇 번 불러도 한 번만 반영
+  if(!folding) return;
+  stopFold(); foldT=0;
+  if(sizeIdx<PAPERS.length-1) sizeIdx++;
+  el("sizeSeg").querySelectorAll(".segBtn").forEach((x,i)=>x.setAttribute("aria-pressed",i===sizeIdx));
+  drawSize(); fxRight(el("btnFold"));
+}
+el("btnFold").onclick=()=>{
+  if(sizeIdx>=PAPERS.length-1){
+    el("sizeCap").textContent="A4보다 작게는 접지 않습니다 — 큰 도면은 A4 크기로 접어 보관합니다";
+    return;
+  }
+  if(folding){ finishFold(); return; }                     // 연타하면 즉시 다음 장으로
+  stopFold(); folding=true; const t0=performance.now();
+  // 탭이 숨겨져 rAF가 멈춰도 진행되도록 타이머로 안전장치
+  foldGuard=setTimeout(finishFold,900);
+  (function step(t){
+    if(!folding) return;
+    foldT=Math.min(1,(t-t0)/650);
+    drawSize();
+    if(foldT<1) foldAnim=requestAnimationFrame(step);
+    else finishFold();
+  })(t0);
+};
+el("btnUnfold").onclick=()=>{ stopFold(); sizeIdx=0; foldT=0;
+  el("sizeSeg").querySelectorAll(".segBtn").forEach((x,i)=>x.setAttribute("aria-pressed",i===0));
+  drawSize(); };
+
+function drawSize(){
+  const {g,w,h}=ctxOf(el("sizeCv"));
+  const p=PAPERS[sizeIdx];
+  const pad=46, availW=w-pad*2, availH=h-pad*2;
+  const k=Math.min(availW/1189, availH/841);          // A0 기준 고정 배율 → 크기 비교가 정직해짐
+  const pw=p.b*k, ph=p.a*k;                            // 가로로 길게 놓음
+  const x0=(w-pw)/2, y0=(h-ph)/2;
+
+  // 접히는 절반(오른쪽)을 왼쪽으로 넘긴다
+  const half=pw/2;
+  g.save();
+  g.fillStyle="#ffffff"; g.strokeStyle="#1c3247"; g.lineWidth=1.6;
+  g.fillRect(x0,y0,half,ph); g.strokeRect(x0,y0,half,ph);      // 남는 절반
+  if(foldT>0){
+    const ang=Math.PI*foldT;                                    // 0 → 180°
+    const sx=Math.cos(ang);                                     // 1 → -1 (원근 없이 폭만 줄었다 늘어남)
+    g.save();
+    g.translate(x0+half,y0); g.scale(sx,1);
+    g.fillStyle=sx<0?"#efe7d3":"#ffffff";
+    g.fillRect(0,0,half,ph); g.strokeRect(0,0,half,ph);
+    g.restore();
+  }else{
+    g.fillRect(x0+half,y0,half,ph); g.strokeRect(x0+half,y0,half,ph);
+    g.save(); g.setLineDash([6,4]); g.strokeStyle="#c1622a"; g.lineWidth=1;
+    g.beginPath(); g.moveTo(x0+half,y0); g.lineTo(x0+half,y0+ph); g.stroke(); g.restore();
+    txt(g,"접는 선",x0+half,y0-12,{color:"#c1622a",size:11,bold:true});
+  }
+  g.restore();
+
+  txt(g,p.n,x0+pw/2,y0+ph/2,{size:Math.max(20,Math.min(40,ph/4)),bold:true,color:"#1c3247"});
+  dimLine(g,x0,y0+ph+18,x0+pw,y0+ph+18,p.b+"");
+  dimLine(g,x0-18,y0,x0-18,y0+ph,p.a+"");
+  txt(g,"단위 mm · A0 대비 실제 비율",w/2,h-9,{color:"#5b7286",size:11});
+  el("sizeCap").textContent=p.n+"  "+p.a+" × "+p.b+" mm   (제도 영역 "+p.ca+" × "+p.cb+")";
+
+  el("sizeTable").innerHTML=
+    "<tr><th>용지</th><th>크기 (mm)</th><th>제도 영역</th><th>구역 수 (긴변/짧은변)</th></tr>"+
+    PAPERS.map(q=>"<tr class='"+(q.n===p.n?"on":"")+"'><td class='k'>"+q.n+"</td><td>"+q.a+" × "+q.b+
+      "</td><td>"+q.ca+" × "+q.cb+"</td><td>"+q.zb+" / "+q.za+"</td></tr>").join("");
+}
+
+/* ---- 쪽 ③ 도면 양식 ---- */
+let formOn=new Set(["frame"]);
+el("formSeg").innerHTML=FORMKEYS.map(k=>
+  '<button class="segBtn" type="button" data-k="'+k+'" aria-pressed="'+(k==="frame")+'">'+FORMS[k].name+'</button>').join("")
+  +'<button class="segBtn" type="button" data-k="ALL">전부 보기</button>';
+el("formSeg").addEventListener("click",e=>{
+  const b=e.target.closest(".segBtn"); if(!b) return;
+  if(b.dataset.k==="ALL"){ formOn=new Set(FORMKEYS); }
+  else{ const k=b.dataset.k; if(formOn.has(k)&&formOn.size>1) formOn.delete(k); else formOn.add(k); }
+  el("formSeg").querySelectorAll(".segBtn").forEach(x=>x.setAttribute("aria-pressed",formOn.has(x.dataset.k)));
+  drawForm(); fxRight(b);
+});
+function drawForm(){
+  const {g,w,h}=ctxOf(el("formCv"));
+  drawSheet(g,w,h,{on:formOn});
+  el("formExplain").innerHTML=[...FORMKEYS].filter(k=>formOn.has(k))
+    .map(k=>"<b>"+FORMS[k].name+"</b> — "+FORMS[k].tip).join("<br><br>");
+}
+// 공용: A3 용지 양식 그리기. opt.on=보여줄 요소 Set, opt.highlight=강조할 요소 키
+function drawSheet(g,w,h,opt){
+  opt=opt||{}; const on=opt.on||new Set(FORMKEYS), hi=opt.highlight;
+  const p=P.A3, pad=34;
+  const k=Math.min((w-pad*2)/p.b,(h-pad*2)/p.a);
+  const pw=p.b*k, ph=p.a*k, x0=(w-pw)/2, y0=(h-ph)/2;
+  const L=20*k, M=10*k;                                     // 왼쪽 20 / 나머지 10
+  const HI="#e0473c", NORM="#1c3247";
+  const col=key=>hi? (key===hi?HI:"#a7b6c4") : NORM;
+  const lw =key=>hi&&key===hi?2.6:1.4;
+
+  g.fillStyle="#ffffff"; g.fillRect(x0,y0,pw,ph);
+  rect(g,x0,y0,pw,ph,"#8a99a8",1);                          // 재단된 용지 가장자리
+
+  if(on.has("frame")){
+    rect(g,x0+L,y0+M,pw-L-M,ph-2*M,col("frame"),lw("frame"));
+    if(hi==="frame"||on.size<=2){
+      dimLine(g,x0,y0+ph*0.30,x0+L,y0+ph*0.30,"20",col("frame"));
+      dimLine(g,x0+pw-M,y0+ph*0.30,x0+pw,y0+ph*0.30,"10",col("frame"));
+    }
+  }
+  if(on.has("zone")){
+    g.save(); g.strokeStyle=col("zone"); g.lineWidth=hi==="zone"?1.8:0.9;
+    const zx=p.zb, zy=p.za;                                  // 긴변 8, 짧은변 6 (A3)
+    for(let i=1;i<zx;i++){ const x=x0+pw*i/zx;
+      g.beginPath(); g.moveTo(x,y0); g.lineTo(x,y0+M); g.stroke();
+      g.beginPath(); g.moveTo(x,y0+ph-M); g.lineTo(x,y0+ph); g.stroke(); }
+    for(let i=1;i<zy;i++){ const y=y0+ph*i/zy;
+      g.beginPath(); g.moveTo(x0,y); g.lineTo(x0+L,y); g.stroke();
+      g.beginPath(); g.moveTo(x0+pw-M,y); g.lineTo(x0+pw,y); g.stroke(); }
+    g.restore();
+    for(let i=0;i<zx;i++) txt(g,String(i+1),x0+pw*(i+.5)/zx,y0+M/2,{size:9,color:col("zone"),bold:true});
+    "ABCDEF".split("").slice(0,zy).forEach((c,i)=>
+      txt(g,c,x0+L/2,y0+ph*(i+.5)/zy,{size:9,color:col("zone"),bold:true}));
+  }
+  if(on.has("center")){
+    g.save(); g.strokeStyle=col("center"); g.lineWidth=hi==="center"?3:2;
+    const cx=x0+pw/2, cy=y0+ph/2, ext=Math.max(M+8*k,12);
+    g.beginPath(); g.moveTo(cx,y0); g.lineTo(cx,y0+ext); g.stroke();
+    g.beginPath(); g.moveTo(cx,y0+ph); g.lineTo(cx,y0+ph-ext); g.stroke();
+    g.beginPath(); g.moveTo(x0,cy); g.lineTo(x0+ext+L*0.4,cy); g.stroke();
+    g.beginPath(); g.moveTo(x0+pw,cy); g.lineTo(x0+pw-ext,cy); g.stroke();
+    g.restore();
+  }
+  if(on.has("cut")){
+    g.save(); g.fillStyle=col("cut");
+    const cw=10*k, ch=5*k;
+    [[x0+pw*0.22,y0-ch],[x0+pw*0.72,y0+ph],[x0-cw,y0+ph*0.24],[x0+pw,y0+ph*0.70]].forEach(([x,y],i)=>{
+      if(i<2) g.fillRect(x,y,cw,ch); else g.fillRect(x,y,ch,cw);
+    });
+    g.restore();
+  }
+  if(on.has("title")){
+    const tw=Math.min(pw-L-M, 150), th=Math.min(ph*0.28, 54);
+    const tx=x0+pw-M-tw, ty=y0+ph-M-th;
+    g.fillStyle="#fbf7ea"; g.fillRect(tx,ty,tw,th);
+    rect(g,tx,ty,tw,th,col("title"),lw("title"));
+    g.save(); g.strokeStyle=col("title"); g.lineWidth=0.8;
+    g.beginPath(); g.moveTo(tx,ty+th/2); g.lineTo(tx+tw,ty+th/2); g.stroke();
+    g.beginPath(); g.moveTo(tx+tw*0.5,ty); g.lineTo(tx+tw*0.5,ty+th); g.stroke();
+    g.restore();
+    txt(g,"도명",tx+tw*0.25,ty+th*0.25,{size:9,color:"#5b7286"});
+    txt(g,"도번",tx+tw*0.75,ty+th*0.25,{size:9,color:"#5b7286"});
+    txt(g,"척도 1:1",tx+tw*0.25,ty+th*0.75,{size:9,color:"#5b7286"});
+    txt(g,"투상법",tx+tw*0.75,ty+th*0.75,{size:9,color:"#5b7286"});
+  }
+  return {x0,y0,pw,ph};
+}
+
+/* ---- 쪽 ④ 척도 ---- */
+let scaleIdx=2;
+el("scaleSeg").innerHTML=SCALES.map((s,i)=>
+  '<button class="segBtn" type="button" data-i="'+i+'" aria-pressed="'+(i===2)+'">'+s.t+'</button>').join("");
+el("scaleSeg").addEventListener("click",e=>{
+  const b=e.target.closest(".segBtn"); if(!b) return;
+  scaleIdx=+b.dataset.i;
+  el("scaleSeg").querySelectorAll(".segBtn").forEach(x=>x.setAttribute("aria-pressed",x===b));
+  drawScale(); fxRight(b);
+});
+function drawScale(){
+  const {g,w,h}=ctxOf(el("scaleCv"));
+  const S=SCALES[scaleIdx];
+  const RW=60, RH=40;                                       // 실제 치수 60 × 40 mm
+  const ppm=Math.min((w/2-40)/(RW*5), (h-90)/(RH*5));       // 5:1 도 화면에 들어오게
+  const drawBox=(cx,cy,mmw,mmh,color,dash,label,dim)=>{
+    const bw=mmw*ppm, bh=mmh*ppm;
+    const x=cx-bw/2, y=cy-bh/2;
+    g.save(); g.strokeStyle=color; g.lineWidth=dash?1.2:2; if(dash)g.setLineDash([5,4]);
+    g.strokeRect(x,y,bw,bh);
+    g.beginPath(); g.moveTo(x,y+bh*0.45); g.lineTo(x+bw*0.55,y+bh*0.45); g.lineTo(x+bw*0.55,y+bh); g.stroke();
+    g.restore();
+    txt(g,label,cx,y-14,{color:color,bold:true,size:12});
+    if(dim){ dimLine(g,x,y+bh+16,x+bw,y+bh+16,dim,color); }
+    return {x,y,bw,bh};
+  };
+  const cy=h/2-6;
+  drawBox(w*0.27,cy,RW,RH,"#8a99a8",true,"실물 (실제 크기)","60");
+  const dw=RW*S.k, dh=RH*S.k;
+  drawBox(w*0.73,cy,dw,dh,"#c1622a",false,"도면 그림 ("+S.t+")","60");
+  g.save(); g.setLineDash([3,3]); g.strokeStyle="#b9c4cf"; g.lineWidth=1;
+  g.beginPath(); g.moveTo(w/2,18); g.lineTo(w/2,h-18); g.stroke(); g.restore();
+  txt(g,"그림 크기는 "+(S.k===1?"같다":(S.k<1?(1/S.k)+"배 작아짐":S.k+"배 커짐"))
+      +" · 치수 숫자는 60 그대로",w/2,h-10,{color:"#5b7286",size:11,bold:true});
+  el("scaleCap").textContent="척도 "+S.t.replace(":"," : ")+"  ("+S.kind+")";
+  el("scaleExplain").innerHTML="<b>"+S.kind+" "+S.t+"</b> — "+KINDTIP[S.kind]+
+    "<br>실제 60mm인 변이 도면에는 <b>"+(RW*S.k)+"mm</b>로 그려집니다. 그래도 도면에 적는 치수는 <b>60</b> 그대로입니다."+
+    "<br><span class='formula'>척도 A : B = 도면에서의 크기 : 실제 크기</span>";
+}
+
+/* ================= 문제 엔진 ================= */
+const qPrompt=el("qPrompt"), qChoices=el("qChoices"), qStageWrap=el("qStageWrap"),
+      qStageCv=el("qStageCv"), qStageCap=el("qStageCap"), qToast=el("qToast"),
+      qExplain=el("qExplain"), btnSubmit=el("btnSubmit"), btnNext=el("btnNext");
+let quiz=null;
+
+function fitPaper(dw,dh){                                   // 도면 그림 크기 → 최소 용지
+  const lo=Math.min(dw,dh), hi=Math.max(dw,dh);
+  for(let i=PAPERS.length-1;i>=0;i--){
+    const p=PAPERS[i];
+    if(hi<=p.cb && lo<=p.ca) return p;
+  }
+  return null;
+}
+
+/* --- 문제 생성기 --- */
+function qPaper(){
+  const S=pick(SCALES.filter(s=>s.k<=2));
+  let W,H,p=null,tries=0;
+  do{
+    W=[120,180,240,300,420,600,760,900,1200][rnd(9)];
+    H=Math.round(W*[0.5,0.6,0.7][rnd(3)]);
+    p=fitPaper(W*S.k,H*S.k); tries++;
+  }while((!p||p.n==="A0")&&tries<40);
+  if(!p) p=P.A0;
+  const opts=shuffle(PAPERS.map(x=>x.n)).slice(0,4);
+  if(!opts.includes(p.n)) opts[0]=p.n;
+  shuffle(opts);
+  return {
+    prompt:"실제 크기가 <b>"+W+" × "+H+" mm</b> 인 물체를 <b>척도 "+S.t+"</b> 로 그리려고 합니다.<br>제도 영역에 들어가는 <b>가장 작은 용지</b>는?",
+    opts:opts.map(n=>({t:n,sub:P[n].a+" × "+P[n].b+" (제도영역 "+P[n].ca+" × "+P[n].cb+")"})),
+    answer:opts.indexOf(p.n),
+    explain:"도면에 그려지는 크기 = 실제 × 척도 = <b>"+(W*S.k)+" × "+(H*S.k)+" mm</b>.<br>"+
+      "이것이 들어가는 가장 작은 제도 영역은 <b>"+p.n+" ("+p.ca+" × "+p.cb+")</b> 입니다."+
+      "<br><span class='formula'>도면 크기 = 실제 크기 × 척도</span>"
+  };
+}
+// 정답 + 그럴듯한 오답으로 서로 다른 보기 4개를 만든다 (중복 방지)
+function numOpts(ans,cands){
+  const r=v=>Math.round(v*100)/100;
+  const set=[r(ans)];
+  const add=v=>{ v=r(v); if(v>0 && isFinite(v) && !set.includes(v)) set.push(v); };
+  cands.forEach(add);
+  for(let m=2;m<=12 && set.length<4;m++){ add(ans*m); add(ans/m); }
+  while(set.length<4) add(ans+set.length*7+1);
+  return shuffle(set.slice(0,4));
+}
+function qScaleCalc(){
+  const S=pick(SCALES.filter(s=>s.k!==1));
+  const kind=rnd(2);
+  if(kind===0){
+    const real=[20,30,40,50,60,80,100,120][rnd(8)];
+    const ans=Math.round(real*S.k*100)/100;
+    const opts=numOpts(ans,[real, real/S.k, real*(S.k<1?2:0.5)]);
+    return {
+      prompt:"실제 길이가 <b>"+real+"mm</b> 인 부분을 <b>척도 "+S.t+"</b> 로 그리면,<br><b>도면에서 실제로 그어지는 선의 길이</b>는?",
+      opts:opts.map(v=>({t:v+" mm"})), answer:opts.indexOf(ans),
+      explain:"척도 A : B 에서 <b>A = 도면에서의 크기, B = 실제 크기</b>. "+S.t+" 이므로 "+
+        real+" × "+(S.k<1?("1/"+(1/S.k)):S.k)+" = <b>"+ans+"mm</b>.<br>"+
+        "단, 도면에 <b>적는 치수 숫자</b>는 척도와 상관없이 <b>"+real+"</b> 입니다."
+    };
+  }else{
+    const drawn=[10,15,20,25,30,40,50][rnd(7)];
+    const ans=Math.round(drawn/S.k*100)/100;
+    const opts=numOpts(ans,[drawn, drawn*S.k, drawn/S.k/2]);
+    return {
+      prompt:"<b>척도 "+S.t+"</b> 로 그린 도면에서 어떤 선을 자로 재니 <b>"+drawn+"mm</b> 였습니다.<br>이 부분의 <b>실제 길이</b>는?",
+      opts:opts.map(v=>({t:v+" mm"})), answer:opts.indexOf(ans),
+      explain:"실제 크기 = 도면 크기 ÷ 척도 = "+drawn+" ÷ "+(S.k<1?("1/"+(1/S.k)):S.k)+" = <b>"+ans+"mm</b>."+
+        "<br><span class='formula'>실제 크기 = 도면에서의 크기 ÷ 척도</span>"
+    };
+  }
+}
+function qScaleKind(){
+  const S=pick(SCALES.concat([{t:"1:10",k:0.1,kind:"축척"},{t:"10:1",k:10,kind:"배척"},
+                              {t:"1:100",k:0.01,kind:"축척"},{t:"20:1",k:20,kind:"배척"}]));
+  const opts=["축척","현척","배척","NS(비례가 아님)"];
+  return {
+    prompt:"표제란에 <b>척도 "+S.t.replace(":"," : ")+"</b> 라고 적혀 있습니다. 이 척도의 종류는?",
+    opts:opts.map(t=>({t})), answer:opts.indexOf(S.kind),
+    explain:"<b>"+S.kind+"</b> — "+KINDTIP[S.kind]+
+      "<br>표시는 늘 <b>척도 A : B</b> (A = 도면에서의 크기, B = 실제 크기) 꼴로 읽습니다."
+  };
+}
+function qForm(){
+  const k=pick(FORMKEYS);
+  const opts=shuffle(FORMKEYS.slice()).slice(0,4);
+  if(!opts.includes(k)) opts[0]=k; shuffle(opts);
+  return {
+    prompt:"도면에서 <b style='color:#ff6b6b'>빨간색</b>으로 표시한 부분의 이름은?",
+    cap:"A3 도면 양식", draw:cv=>{ const {g,w,h}=ctxOf(cv); drawSheet(g,w,h,{on:new Set(FORMKEYS),highlight:k}); },
+    opts:opts.map(x=>({t:FORMS[x].name})), answer:opts.indexOf(k),
+    explain:"<b>"+FORMS[k].name+"</b> — "+FORMS[k].tip
+  };
+}
+function qFormRule(){
+  const Q=[
+    {p:"도면 <b>윤곽선</b>의 폭에 대한 설명으로 옳은 것은?",
+     o:["왼쪽 20mm, 나머지 세 변 10mm","네 변 모두 10mm","네 변 모두 20mm","왼쪽 10mm, 나머지 20mm"],a:0,
+     e:"왼쪽 윤곽은 <b>20mm</b>로 넓게 두어 <b>철할 때 여백</b>으로 씁니다. 나머지 세 변은 10mm이고, 0.7mm 굵기 실선으로 그립니다."},
+    {p:"<b>표제란</b>을 두는 위치는?",
+     o:["제도 영역의 오른쪽 아래","제도 영역의 왼쪽 위","용지 한가운데","제도 영역의 왼쪽 아래"],a:0,
+     e:"표제란은 <b>오른쪽 아래 구석</b>. 도면을 읽는 방향이 곧 표제란을 읽는 방향입니다."},
+    {p:"표제란에 <b>기입하지 않는</b> 것은?",
+     o:["재료의 인장강도","도면 번호(도번)","척도","투상법"],a:0,
+     e:"표제란에는 <b>도번·도명·척도·투상법·작성일·제도자</b> 등 도면 관리 정보를 적습니다."},
+    {p:"도면의 <b>구역 표시</b>에서 영문 대문자 <b>I 와 O</b>를 쓰지 않는 이유는?",
+     o:["숫자 1, 0과 헷갈리기 때문","KS에 없는 문자라서","선 굵기가 달라서","외국 도면과 겹쳐서"],a:0,
+     e:"세로 방향은 영문 대문자, 가로 방향은 숫자로 표시하는데 <b>I는 1, O는 0</b>과 혼동되어 제외합니다."},
+    {p:"<b>중심 마크</b>를 표시하는 이유로 옳은 것은?",
+     o:["도면을 복사·마이크로필름으로 만들 때 위치를 잡으려고","물체의 중심선을 나타내려고","용지를 자를 위치를 알리려고","척도를 표시하려고"],a:0,
+     e:"중심 마크는 <b>재단된 용지의 두 대칭축 끝에 4개</b>. 물체의 중심선(가는 1점 쇄선)과는 전혀 다릅니다."},
+    {p:"큰 도면을 접어서 보관할 때 <b>접는 크기</b>의 원칙은?",
+     o:["A4 크기","A3 크기","A2 크기","정해져 있지 않다"],a:0,
+     e:"큰 도면은 <b>A4 크기</b>로 접는 것이 원칙입니다. 그래야 파일에 함께 보관할 수 있습니다."},
+    {p:"<b>재단 마크</b>의 크기와 모양으로 옳은 것은?",
+     o:["10mm × 5mm 직사각형 두 개가 합쳐진 모양","지름 10mm의 원","한 변 20mm의 정사각형","길이 50mm의 굵은 실선"],a:0,
+     e:"복사한 도면을 <b>자를 위치</b>를 알리려고 네 변의 경계에 <b>10 × 5mm</b> 직사각형 두 개를 합친 모양으로 표시합니다."},
+    {p:"도면 용지의 <b>짧은 변 : 긴 변</b> 비는?",
+     o:["1 : √2","1 : 2","2 : 3","1 : 1.5"],a:0,
+     e:"<b>1 : √2</b> 이므로 반으로 접어도 비율이 그대로입니다. 그래서 A0을 접으면 A1, 또 접으면 A2가 됩니다."},
+    {p:"<b>A0 용지</b>에 대한 설명으로 옳은 것은?",
+     o:["841 × 1189 mm 이고 넓이가 약 1m²","594 × 841 mm 이고 넓이가 약 1m²","841 × 1189 mm 이고 넓이가 약 2m²","1000 × 1000 mm 인 정사각형"],a:0,
+     e:"<b>A0 = 841 × 1189mm</b>, 넓이 약 <b>1m²</b>. 여기서 반씩 접어 A1(594×841) → A2(420×594) → A3(297×420) → A4(210×297)."},
+    {p:"도면에 기입하는 <b>치수</b>와 척도의 관계로 옳은 것은?",
+     o:["척도와 관계없이 모두 실제 치수로 기입한다","도면에 그려진 크기 그대로 기입한다","축척일 때만 실제 치수로 기입한다","척도를 곱해서 기입한다"],a:0,
+     e:"가장 많이 틀리는 부분입니다. 1:2로 그렸어도 실제 60mm면 도면에는 <b>60</b>이라고 적습니다. 척도는 <b>표제란</b>에 적습니다."},
+    {p:"도면 전체가 <b>정해진 척도대로 그려지지 않았을 때</b> 표시 방법은?",
+     o:["‘NS’ 또는 ‘비례가 아님’으로 적거나 치수 밑에 밑줄을 긋는다","척도란을 비워 둔다","치수를 괄호로 묶는다","도면을 다시 그린다"],a:0,
+     e:"<b>NS = Not to Scale</b>. 표제란 척도란에 NS라 적거나, 해당 치수 밑에 <b>밑줄</b>을 그어 비례가 아님을 알립니다."},
+    {p:"한 장의 도면에 <b>서로 다른 척도</b>를 쓸 때 옳은 것은?",
+     o:["주요 척도는 표제란에, 나머지는 그 그림의 부품 번호 부근에 적는다","표제란에 모두 나열한다","도면 왼쪽 위에 모아 적는다","척도를 적지 않는다"],a:0,
+     e:"주요 척도만 표제란에 적고, 그 밖의 척도는 <b>해당 그림의 부품 번호나 상세도 참조 문자 부근</b>에 적습니다."}
+  ];
+  const q=pick(Q);
+  const idx=q.o.map((t,i)=>i); shuffle(idx);
+  return {prompt:q.p, opts:idx.map(i=>({t:q.o[i]})), answer:idx.indexOf(q.a), explain:q.e};
+}
+function qKS(){
+  if(rnd(2)===0){
+    const [s,n]=pick(KS.filter(x=>["A","B","C","D","F","M","R","W","X"].includes(x[0])));
+    const wrongs=shuffle(KS.filter(x=>x[0]!==s)).slice(0,3).map(x=>x[1]);
+    const opts=shuffle([n,...wrongs]);
+    return {prompt:"한국 산업 표준에서 <b>KS "+s+"</b> 는 어느 부문인가?",
+      opts:opts.map(t=>({t})), answer:opts.indexOf(n),
+      explain:"<b>KS "+s+" = "+n+"</b>. 자주 나오는 것 — <b>A 기본 · B 기계 · C 전기전자 · D 금속 · F 건설</b>. 제도 통칙은 <b>KS A 0005</b> 입니다."};
+  }
+  const Q=[
+    {p:"제도의 기본·공통 사항을 규정한 <b>KS 제도 통칙</b>의 번호는?",
+     o:["KS A 0005","KS B 0001","KS A 0107","KS D 3503"],a:0,
+     e:"<b>KS A 0005(제도 통칙)</b> — 도면의 크기와 양식, 문자, 투상법, 척도, 치수 기입 등 기본 사항을 규정합니다."},
+    {p:"전기·전자 분야를 <b>제외한</b> 모든 분야의 국제 표준을 담당하는 기구는?",
+     o:["ISO(국제표준화기구)","IEC(국제전기표준회의)","KS(한국 산업 표준)","ANSI(미국 표준)"],a:0,
+     e:"<b>ISO</b>는 전기·전자를 뺀 전 분야, <b>IEC</b>는 전기·전자 분야의 국제 표준을 맡습니다."},
+    {p:"<b>JIS</b> 는 어느 나라의 표준인가?",
+     o:["일본","독일","영국","프랑스"],a:0,
+     e:"JIS 일본 · DIN 독일 · BS 영국 · NF 프랑스 · ANSI 미국 · GB 중국 · <b>KS 우리나라</b>."},
+    {p:"기업이나 공장이 <b>내부에서만</b> 적용하려고 정한 표준은?",
+     o:["사내 표준","국가 표준","단체 표준","국제 표준"],a:0,
+     e:"국제 표준(ISO·IEC) → 국가 표준(KS·JIS…) → 단체 표준(SAE·KR…) → <b>사내 표준</b> 순으로 적용 범위가 좁아집니다."},
+    {p:"도면에 쓰는 <b>문자의 크기</b>는 무엇으로 나타내는가?",
+     o:["문자의 높이(mm)","문자의 너비(mm)","선의 굵기(mm)","글자 사이 간격(mm)"],a:0,
+     e:"문자 크기 = <b>높이</b>. KS A 0107에서 <b>2.5, 3.5, 5, 7, 10, 14, 20mm</b>로 규정합니다."},
+    {p:"도면에 <b>재료 기호나 가공 방법 기호</b>를 나타낼 때 주로 쓰는 문자는?",
+     o:["영문자","한글","한자","그리스 문자"],a:0,
+     e:"한글 = 도명·부품명·주서, <b>영문자 = 재료기호·가공방법·치수 보조기호</b>, 숫자 = 치수·척도·도번·수량."},
+    {p:"도면에 쓰는 <b>선의 굵기</b> 비율(가는 선 : 굵은 선 : 아주 굵은 선)은?",
+     o:["1 : 2 : 4","1 : 2 : 3","1 : 3 : 5","1 : 1.5 : 2"],a:0,
+     e:"<b>1 : 2 : 4</b> 비율로, 용지 크기에 맞춰 굵기를 고릅니다. (예: 0.25 / 0.5 / 1mm)"}
+  ];
+  const q=pick(Q); const idx=q.o.map((t,i)=>i); shuffle(idx);
+  return {prompt:q.p, opts:idx.map(i=>({t:q.o[i]})), answer:idx.indexOf(q.a), explain:q.e};
+}
+
+const GEN={
+  paper:()=>pick([qPaper,qPaper,qFormRule])(),
+  scale:()=>pick([qScaleCalc,qScaleCalc,qScaleKind])(),
+  form :()=>pick([qForm,qForm,qFormRule,qKS])(),
+  exam :()=>pick([qPaper,qScaleCalc,qScaleKind,qForm,qFormRule,qFormRule,qKS])()
+};
+
+function renderQ(){
+  const q=quiz.q;
+  qPrompt.innerHTML=q.prompt;
+  if(q.draw){ qStageWrap.classList.remove("hidden"); qStageCap.textContent=q.cap||""; q.draw(qStageCv); }
+  else qStageWrap.classList.add("hidden");
+  qChoices.innerHTML="";
+  qChoices.classList.toggle("one", q.opts.some(o=>(o.t||"").length>26));
+  q.opts.forEach((o,i)=>{
+    const b=document.createElement("button");
+    b.className="choice"; b.type="button";
+    b.innerHTML='<span class="num">'+"①②③④"[i]+'</span><span class="tx">'+o.t+
+      (o.sub?'<small>'+o.sub+'</small>':'')+'</span>';
+    b.onclick=()=>{ if(quiz.answered) return; quiz.sel=i; btnSubmit.disabled=false;
+      qChoices.querySelectorAll(".choice").forEach(x=>x.classList.toggle("sel",x===b)); };
+    qChoices.appendChild(b);
+  });
+  quiz.answered=false; quiz.sel=null;
+  const old=el("rcBtn"); if(old) old.remove();          // 이전 회차의 제출 버튼 제거
+  btnSubmit.disabled=true; btnSubmit.classList.remove("hidden");
+  btnNext.classList.add("hidden"); qExplain.classList.add("hidden");
+  qToast.className="toast go"; qToast.innerHTML="보기를 고른 뒤 <b>제출</b>을 누르세요.";
+  el("qRound").textContent=quiz.round; el("qTotal").textContent=quiz.total;
+  el("qScore").textContent=quiz.score; el("qCombo").textContent="연속 "+quiz.combo;
+}
+function submitQ(){
+  if(quiz.answered||quiz.sel==null) return;
+  quiz.answered=true;
+  const q=quiz.q, ok=quiz.sel===q.answer;
+  if(ok){quiz.score++;quiz.combo++;quiz.best=Math.max(quiz.best,quiz.combo);}
+  else {quiz.combo=0; quiz.wrong.push(quiz.round);}
+  const btns=qChoices.querySelectorAll(".choice");
+  btns.forEach((b,i)=>{ b.disabled=true; b.classList.remove("sel");
+    if(i===q.answer) b.classList.add("correct"); else if(i===quiz.sel) b.classList.add("wrong"); });
+  ok?fxRight(btns[quiz.sel]):fxWrong(btns[quiz.sel]);
+  el("qScore").textContent=quiz.score; el("qCombo").textContent="연속 "+quiz.combo;
+  qToast.className="toast "+(ok?"ok":"no");
+  qToast.textContent=ok?(quiz.combo>=3?"정답! "+quiz.combo+"연속 🔥":"정답이에요!")
+                       :"아쉬워요. 정답은 "+"①②③④"[q.answer]+"번.";
+  qExplain.innerHTML=q.explain; qExplain.classList.remove("hidden");
+  btnSubmit.classList.add("hidden"); btnNext.classList.remove("hidden");
+  btnNext.textContent = quiz.round>=quiz.total?"결과 보기 →":"다음 문제 →";
+}
+function startQuiz(type,total){
+  quiz={type,total:total||8,round:1,score:0,combo:0,best:0,answered:false,sel:null,
+        q:null,wrong:[],started:Date.now()};
+  quiz.q=GEN[type](); renderQ();
+}
+btnSubmit.onclick=submitQ;
+btnNext.onclick=()=>{ if(quiz.round>=quiz.total){finish();return;} quiz.round++; quiz.q=GEN[quiz.type](); renderQ(); };
+el("btnRestart").onclick=()=>startQuiz(quiz.type,quiz.total);
+
+function finish(){
+  const pct=Math.round(quiz.score/quiz.total*100), sec=Math.round((Date.now()-quiz.started)/1000);
+  const miss=quiz.total-quiz.score;
+  qStageWrap.classList.add("hidden"); qChoices.innerHTML="";
+  qPrompt.innerHTML="🎉 <b>"+quiz.total+"문제 완료!</b>";
+  qToast.className="toast "+(pct>=80?"ok":pct>=60?"go":"no");
+  qToast.textContent=pct+"점 · "+quiz.score+"/"+quiz.total+" 정답 · 최고 "+quiz.best+"연속 · "+sec+"초";
+  qExplain.classList.remove("hidden");
+  qExplain.innerHTML= pct>=80?"훌륭합니다! 용지·양식·척도를 잘 구분합니다."
+    : pct>=60?"좋아요. <b>📖 배우기 ④쪽</b>에서 척도를 바꿔 보며 ‘치수는 언제나 실제 치수’를 한 번 더 확인해 보세요."
+    : "<b>📖 배우기</b>로 돌아가 A0을 직접 접어 보고, 양식 요소를 하나씩 켜 보세요. 그다음 다시 풀면 훨씬 쉬워집니다.";
+  btnSubmit.classList.add("hidden"); btnNext.classList.add("hidden");
+  fxBanner({icon:pct>=80?"🏆":"💪", title:pct+"점!",
+            sub:quiz.score+" / "+quiz.total+" 정답 · "+sec+"초", stars:fxStars(miss)});
+  const old=el("rcBtn"); if(old) old.remove();
+  if(window.ResultCollector && quiz.type==="exam"){
+    const btn=document.createElement("button");
+    btn.id="rcBtn"; btn.className="btn"; btn.style.marginTop="12px"; btn.textContent="🧑‍🏫 선생님께 결과 제출";
+    const endpoint=ResultCollector.config && ResultCollector.config.endpoint;
+    if(endpoint){
+      btn.onclick=()=>{ try{ ResultCollector.open({score:pct,correct:quiz.score,total:quiz.total,
+        wrong:quiz.wrong,durationSec:sec}); }catch(e){} };
+      qExplain.after(btn);
+    }
+  }
+}
+
+/* ================= 탭 ================= */
+const TABS={tabLearn:null, tabPaper:"paper", tabScale:"scale", tabForm:"form", tabExam:"exam"};
+function showTab(id){
+  Object.keys(TABS).forEach(t=>el(t).setAttribute("aria-pressed",t===id));
+  const isLearn=id==="tabLearn";
+  el("secLearn").classList.toggle("hidden",!isLearn);
+  el("secQuiz").classList.toggle("hidden",isLearn);
+  if(isLearn) renderLearn();
+  else startQuiz(TABS[id], id==="tabExam"?10:8);
+}
+Object.keys(TABS).forEach(t=>el(t).onclick=()=>showTab(t));
+
+window.addEventListener("resize",()=>{
+  if(!el("secLearn").classList.contains("hidden")){
+    const wdg=LEARN[page].widget;
+    if(wdg==="wSize") drawSize(); if(wdg==="wForm") drawForm(); if(wdg==="wScale") drawScale();
+  }else if(quiz&&quiz.q&&quiz.q.draw) quiz.q.draw(qStageCv);
+});
+
+renderLearn();
+})();
+</script>
+</body>
+</html>
