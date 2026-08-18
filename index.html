@@ -892,6 +892,31 @@ btnSubmit.onclick=submitQ;
 btnNext.onclick=()=>{ if(quiz.round>=quiz.total){finish();return;} quiz.round++; quiz.q=GEN[quiz.type](); renderQ(); };
 el("btnRestart").onclick=()=>startQuiz(quiz.type,quiz.total);
 
+/* collector.js가 아직 구버전이어도 제출 버튼이 보이도록 하는 대비 코드 */
+function rcAttach(anchor, payloadFn, opts){
+  var RC = window.ResultCollector;
+  if(!RC || !anchor) return;
+  if(RC.attach) return RC.attach(anchor, payloadFn, opts);
+  var old = document.getElementById("rcBtn"); if(old && old.parentNode) old.parentNode.removeChild(old);
+  var b = document.createElement("button");
+  b.id="rcBtn"; b.className="btn"; b.style.marginTop="12px"; b.textContent="🧑‍🏫 선생님께 결과 제출";
+  b.onclick=function(){
+    if(!(RC.config && RC.config.endpoint)){
+      alert("이 링크로는 제출이 되지 않아요. 선생님이 나눠 준 제출용 링크로 들어와야 합니다.");
+      return;
+    }
+    var p = payloadFn() || {};
+    if(opts && opts.mode) p.mode = opts.mode;
+    if(opts && opts.extra) p.extra = opts.extra;
+    RC.open(p);
+  };
+  anchor.after ? anchor.after(b) : anchor.parentNode.insertBefore(b, anchor.nextSibling);
+}
+/* 제출 시 기록될 활동명과 생기부 키워드 */
+const MODE_LABEL={paper:"도면 양식·척도 — 용지 고르기", scale:"도면 양식·척도 — 척도 계산",
+                  form:"도면 양식·척도 — 도면 양식", exam:"도면 양식·척도 — 종합시험"};
+const MODE_EXTRA={paper:["도면 용지 규격 이해"], scale:["척도 개념 이해","비례 계산"],
+                  form:["도면 양식 요소 이해"], exam:["용지·양식·척도 종합 이해"]};
 function finish(){
   const pct=Math.round(quiz.score/quiz.total*100), sec=Math.round((Date.now()-quiz.started)/1000);
   if(window.RankKit) RankKit.award(pct);   /* 랭킹전 RP 정산 */
@@ -907,16 +932,11 @@ function finish(){
   btnSubmit.classList.add("hidden"); btnNext.classList.add("hidden");
   fxBanner({icon:pct>=80?"🏆":"💪", title:pct+"점!",
             sub:quiz.score+" / "+quiz.total+" 정답 · "+sec+"초", stars:fxStars(miss)});
-  const old=el("rcBtn"); if(old) old.remove();
-  if(window.ResultCollector && quiz.type==="exam"){
-    const btn=document.createElement("button");
-    btn.id="rcBtn"; btn.className="btn"; btn.style.marginTop="12px"; btn.textContent="🧑‍🏫 선생님께 결과 제출";
-    const endpoint=ResultCollector.config && ResultCollector.config.endpoint;
-    if(endpoint){
-      btn.onclick=()=>{ try{ ResultCollector.open({score:pct,correct:quiz.score,total:quiz.total,
-        wrong:quiz.wrong,durationSec:sec}); }catch(e){} };
-      qExplain.after(btn);
-    }
+  // 제출 — 연습 3모드·종합시험 모두 가능 (제출 링크가 없어도 버튼은 보이고 안내해 줌)
+  if(window.ResultCollector){
+    rcAttach(qExplain,
+      ()=>({score:pct, correct:quiz.score, total:quiz.total, wrong:quiz.wrong, durationSec:sec}),
+      { mode: MODE_LABEL[quiz.type] || quiz.type, extra: MODE_EXTRA[quiz.type] || [] });
   }
 }
 
