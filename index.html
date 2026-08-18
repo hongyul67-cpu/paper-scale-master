@@ -870,7 +870,8 @@ function submitQ(){
   quiz.answered=true;
   const q=quiz.q, ok=quiz.sel===q.answer;
   if(ok){quiz.score++;quiz.combo++;quiz.best=Math.max(quiz.best,quiz.combo);}
-  else {quiz.combo=0; quiz.wrong.push(quiz.round);}
+  else {quiz.combo=0; quiz.wrong.push(quiz.round);
+        quiz.wrongDetail.push({round:quiz.round, q:q, sel:quiz.sel, opts:(typeof examOptTexts==="function"?examOptTexts():null)});}
   const btns=qChoices.querySelectorAll(".choice");
   btns.forEach((b,i)=>{ b.disabled=true; b.classList.remove("sel");
     if(i===q.answer) b.classList.add("correct"); else if(i===quiz.sel) b.classList.add("wrong"); });
@@ -886,7 +887,7 @@ function submitQ(){
 function startQuiz(type,total){
   const rv=el("qReview"); if(rv) rv.remove();
   quiz={type,total:total||8,round:1,score:0,combo:0,best:0,answered:false,sel:null,rev:[],
-        q:null,wrong:[],started:Date.now()};
+        q:null,wrong:[],wrongDetail:[],started:Date.now()};
   quiz.q=GEN[type](); renderQ();
 }
 btnSubmit.onclick=submitQ;
@@ -990,6 +991,27 @@ function rcAttach(anchor, payloadFn, opts){
   };
   anchor.after ? anchor.after(b) : anchor.parentNode.insertBefore(b, anchor.nextSibling);
 }
+/* ── 오답을 "무엇을 틀렸는지"로 남긴다 (규약 §1 ②) ──
+   시험은 quiz.rev 에 문항이 다 들어 있고, 연습은 quiz.wrongDetail 에 모은다.
+   결과 예) "3번 ① 정육면체 전개도→② 원뿔 전개도" */
+function rcShort(t,n){
+  t=String(t==null?"":t).replace(/<[^>]*>/g," ")
+    .replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&")
+    .replace(/\s+/g," ").trim();
+  t=t.replace(/^(?:[\u2460-\u2469]\s*)+/,"");   // 겹쳐 붙은 보기 번호 정리
+  return t.length>n ? t.slice(0,n-1)+"\u2026" : t;
+}
+function rcWrongList(){
+  var src = (quiz && quiz.rev && quiz.rev.length)
+    ? quiz.rev.filter(function(r){ return !r.ok; })
+    : ((quiz && quiz.wrongDetail) || []);
+  return src.map(function(r){
+    var mine, ans;
+    try{ mine = rcShort(examAnsText(r, r.sel), 16); }catch(e){ mine = "(응답)"; }
+    try{ ans  = rcShort(examAnsText(r, r.q.answer), 16); }catch(e){ ans = "(정답)"; }
+    return r.round + "\ubc88 " + mine + "\u2192" + ans;
+  });
+}
 /* 제출 시 기록될 활동명과 생기부 키워드 */
 const MODE_LABEL={paper:"도면 양식·척도 — 용지 고르기", scale:"도면 양식·척도 — 척도 계산",
                   form:"도면 양식·척도 — 도면 양식", exam:"도면 양식·척도 — 종합시험"};
@@ -1015,7 +1037,7 @@ function finish(){
   if(quiz.type==="exam"){ try{ rcAnchor=examReview()||qExplain; }catch(e){} }
   if(window.ResultCollector){
     rcAttach(rcAnchor,
-      ()=>({score:pct, correct:quiz.score, total:quiz.total, wrong:quiz.wrong, durationSec:sec}),
+      ()=>({score:pct, correct:quiz.score, total:quiz.total, wrong:rcWrongList(), durationSec:sec}),
       { mode: MODE_LABEL[quiz.type] || quiz.type, extra: MODE_EXTRA[quiz.type] || [] });
   }
 }
