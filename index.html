@@ -763,7 +763,7 @@ function qScaleKind(){
                               {t:"1:100",k:0.01,kind:"축척"},{t:"20:1",k:20,kind:"배척"}]));
   const opts=["축척","현척","배척","NS(비례가 아님)"];
   return {
-    prompt:"표제란에 <b>척도 "+S.t.replace(":"," : ")+"</b> 라고 적혀 있습니다. 이 척도의 종류는?",
+    prompt:"표제란의 척도가 <b>"+S.t.replace(":"," : ")+"</b> 입니다. 이 척도의 종류는?",
     opts:opts.map(t=>({t})), answer:opts.indexOf(S.kind),
     explain:"<b>"+S.kind+"</b> — "+KINDTIP[S.kind]+
       "<br>표시는 늘 <b>척도 A : B</b> (A = 도면에서의 크기, B = 실제 크기) 꼴로 읽습니다."
@@ -909,14 +909,26 @@ function submitQ(){
   btnSubmit.classList.add("hidden"); btnNext.classList.remove("hidden");
   btnNext.textContent = quiz.round>=quiz.total?"결과 보기 →":"다음 문제 →";
 }
+// 한 회차 안에서 같은 문제가 또 나오지 않게 뽑는다 (발문 + 정답 텍스트로 구분)
+function nextQ(type){
+  const seen = quiz.seen || (quiz.seen = new Set());
+  let q = null;
+  for(let i=0;i<40;i++){
+    q = GEN[type]();
+    const opt = q.opts && q.opts[q.answer];
+    const key = (q.prompt||"") + "|" + ((opt && opt.t) || "");
+    if(!seen.has(key)){ seen.add(key); return q; }
+  }
+  return q;                                   // 낼 게 동나면 그냥 마지막 것으로
+}
 function startQuiz(type,total){
   const rv=el("qReview"); if(rv) rv.remove();
   quiz={type,total:total||8,round:1,score:0,combo:0,best:0,answered:false,sel:null,rev:[],
-        q:null,wrong:[],wrongDetail:[],started:Date.now()};
-  quiz.q=GEN[type](); renderQ();
+        q:null,wrong:[],wrongDetail:[],started:Date.now(),seen:new Set()};
+  quiz.q=nextQ(type); renderQ();
 }
 btnSubmit.onclick=submitQ;
-btnNext.onclick=()=>{ if(quiz.round>=quiz.total){finish();return;} quiz.round++; quiz.q=GEN[quiz.type](); renderQ(); };
+btnNext.onclick=()=>{ if(quiz.round>=quiz.total){finish();return;} quiz.round++; quiz.q=nextQ(quiz.type); renderQ(); };
 el("btnRestart").onclick=()=>startQuiz(quiz.type,quiz.total);
 
 /* ══ 종합시험 — 채점을 끝으로 미루고 오답노트로 보여준다 ═══════════════
