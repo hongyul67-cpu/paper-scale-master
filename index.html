@@ -120,6 +120,28 @@
 </style>
 </head>
 <body>
+<style>
+  /* 2026-09-08 — 이 도구는 「기초 제도 마스터 아카데미」로 합쳐졌습니다.
+     예전에 나눠 준 주소로 들어온 학생이 헤매지 않도록 맨 위에 한 줄만 띄웁니다.
+     ?rc= 같은 값은 그대로 들고 넘어갑니다. */
+  #movedbar{background:#ffb454;color:#1a1306;padding:11px 14px;border-radius:12px;
+    margin:0 auto 16px;max-width:760px;font-size:14px;line-height:1.6;font-weight:700;
+    display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;text-align:center}
+  #movedbar a{background:#1a1306;color:#ffb454;text-decoration:none;border-radius:8px;
+    padding:7px 13px;white-space:nowrap}
+</style>
+<div id="movedbar">
+  <span>📐 이 도구는 <b>기초 제도 마스터 아카데미</b> 안으로 들어갔습니다. 여기도 그대로 쓸 수 있어요.</span>
+  <a id="movedgo" href="https://hongyul67-cpu.github.io/domyeon-master/">합본으로 가기 →</a>
+</div>
+<script>
+  /* 선생님이 준 ?rc= 링크로 들어왔으면 합본으로 갈 때도 들고 간다 */
+  (function(){ try{
+    var q = location.search;
+    if(q && q.length > 1) document.getElementById('movedgo').href += q;
+  }catch(e){} })();
+</script>
+
 <div class="wrap">
   <div class="eyebrow">Drawing Format · 도면 양식과 척도</div>
   <h1>도면 양식·척도 마스터</h1>
