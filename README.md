@@ -44,6 +44,11 @@
   .../paper-scale-master/?rc=https://script.google.com/macros/s/.../exec
   ```
 
+## 파일
+
+- `index.html` 도구 본체 · `lesson.js` 수업 슬라이드 원고 · `rubric.json` 평가 기준
+- `figs.js` 배우기·슬라이드 그림(공용 `links/fig.js` 로 그림). **도면읽기(domyeon-master) 것과 같은 파일** — 고칠 때는 그쪽을 고쳐 복사
+
 ## 이어지는 도구
 
 - [도면읽기 마스터](https://hongyul67-cpu.github.io/domyeon-master/) — 선의 종류 · 치수 읽기 · 기계요소

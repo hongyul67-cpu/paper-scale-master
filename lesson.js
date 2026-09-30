@@ -190,6 +190,21 @@ scaleDim: function () { return '' +
 
 };
 
+/* 배우기 카드와 같은 그림(figs.js · links/fig.js) — 2026-09-30 그림01.
+   (슬라이드에서는 labels:false — 요점 빈칸의 답이 되는 그림 글자를 ? 로 가린다)
+   위의 옛 그림은 지우지 않았다. fig.js 를 못 불렀을 때만 대신 쓴다. */
+function shared(key, old) {
+  return function () {
+    var G = window.FIG;
+    return (G && G.has && G.has(key)) ? G.svgOf(key, { labels: false }) : old();
+  };
+}
+FIG.std = shared('std-levels', FIG.std);
+FIG.papers = shared('paper-nest', FIG.papers);
+FIG.form5 = shared('sheet-form', FIG.form5);
+FIG.scale3 = shared('scale-3', FIG.scale3);
+FIG.scaleDim = shared('scale-3', FIG.scaleDim);
+
 var LESSON = [
 
 /* ═══ Ⅰ. 제도의 규격 ═══ */
@@ -311,7 +326,7 @@ var LESSON = [
  anso:['글씨를 크게 쓰려고','철하는 여백을 남기려고','접기 쉽게 하려고','표제란을 넣으려고'], ansa:1,
  anse:'왼쪽 20mm 는 <b>철하는(바인딩) 여백</b>이다. 나머지 세 변은 10mm.'},
 
-{u:'Ⅲ. 도면의 양식', t:'표제란 — 오른쪽 아래 구석',
+{u:'Ⅲ. 도면의 양식', t:'표제란 — 오른쪽 아래 구석', fig:'form5',
  pts:['제도 영역의 <b>{{오른쪽 아래}}</b> 구석에 둔다. 자리가 정해져 있다.',
       '<b>표제란을 읽는 방향 = 도면을 읽는 방향</b>이다. 도면을 어느 쪽으로 놓을지 알려 준다.',
       '적는 것 — <b>도번 · 도명 · 척도 · 투상법 · 작성일 · 제도자.</b>'],
@@ -320,7 +335,7 @@ var LESSON = [
  anso:['왼쪽 위','오른쪽 위','왼쪽 아래','오른쪽 아래'], ansa:3,
  anse:'제도 영역의 <b>오른쪽 아래</b>다. 이 방향이 곧 도면을 읽는 방향이 된다.'},
 
-{u:'Ⅲ. 도면의 양식', t:'중심 마크 — 네 곳에 짧게',
+{u:'Ⅲ. 도면의 양식', t:'중심 마크 — 네 곳에 짧게', fig:'form5',
  pts:['<b>두 대칭축의 끝</b>, 곧 네 변 한가운데에 <b>{{4}}개</b> 표시한다.',
       '도면을 <b>다시 만들거나 마이크로필름으로 만들 때</b> 위치를 잡는 데 쓴다.',
       '구역 표시 경계에서 시작해 <b>윤곽선을 지나 10mm 까지</b>, 0.7mm 실선으로 긋는다.'],
@@ -339,7 +354,7 @@ var LESSON = [
  anso:['A 와 B','I 와 O','X 와 Y','S 와 Z'], ansa:1,
  anse:'<b>I 와 O</b> 다. 숫자 <b>1 · 0</b> 과 혼동되기 때문에 건너뛴다.'},
 
-{u:'Ⅲ. 도면의 양식', t:'재단 마크 — 자를 자리 표시',
+{u:'Ⅲ. 도면의 양식', t:'재단 마크 — 자를 자리 표시', fig:'form5',
  pts:['복사한 도면을 <b>어디서 자를지</b> 알려 주는 표시다.',
       '네 변의 경계에 <b>{{10 × 5}}mm</b> 직사각형 두 개가 붙은 모양으로 넣는다.',
       '도면 내용과는 상관이 없다 — <b>인쇄·재단</b>을 위한 표시다.'],
